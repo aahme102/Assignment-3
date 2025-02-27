@@ -72,3 +72,27 @@ preProc <- preProcess(train_data[, -1], method = c("center", "scale"))
 train_data_norm <- predict(preProc, train_data[, -1])
 test_data_norm <- predict(preProc, test_data[, -1])
 ```
+
+**2. Describe the model that you are using. What is the model? Why do you think it will work well with the dataset that you have chosen? What are the hyperparameters of the model? Define whether you are using a classification model or a regression model. Answer all of these questions BEFORE you train the model.**
+
+**Model Selection and Justification**
+
+For the af_crime93 dataset, I will run a multiple linear regression model to predict the impact on the violent crime rate (violet) based on other independent variables (murder, poverty, single, metro, white, high school) in the dataset.
+
+I am running a multiple linear regression model because the target variable (violent) is continuous (measured as a rate per 100,000 people) and since I’m predicting a numerical value and not any classifying categories. Therefore, this is a regression model because the output is a continuous variable (violent crime rate) rather than discrete categories. Moreover, multiple linear regression is effective when there is a linear relationship between independent variables and the target. The model would also allow us to interpret how each predictor impacts the violent crime rate by looking at its coefficients. This would help policymakers in developing insights from the model to understand what factors influence crime rates in the U.S. states.
+
+**Hyperparameters of the Model**
+
+Linear regression has fewer hyperparameters. However, we can still adjust certain settings:
+
+-   Regularization (if used): Lasso (L1) or Ridge (L2) regularization can be applied to prevent overfitting.
+
+-   Feature Scaling: Since linear regression is sensitive to different scales of variables, we normalized the data.
+
+-   Train-Test Split: Ensuring an 80-20 split maintains a balance between training and evaluation.
+
+**3. Train the model. If there are hyperparameters that you need to tune, tune them. If you choose not to tune them, explain why.**
+
+
+
+**4. Evaluate the model. Decide which metrics are relevant for your model, and evaluate the model using those metrics.**
