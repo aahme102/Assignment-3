@@ -7,15 +7,36 @@ editor: visual
 
 ## Quarto
 
+
+
 ```{r setup}
-library("tidyverse")
-install.packages("stevedata")
-library("stevedata")
-install.packages("tidytuesdayR")
-library("tidytuesdayR")
-library(tidymodels)
-install.packages("caret")  
+# Set CRAN mirror first
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+# Load necessary libraries
+library(tidyverse)
+
+if (!requireNamespace("stevedata", quietly = TRUE)) {
+  install.packages("stevedata")
+}
+library(stevedata)
+
+if (!requireNamespace("tidytuesdayR", quietly = TRUE)) {
+  install.packages("tidytuesdayR")
+}
+library(tidytuesdayR)
+
+if (!requireNamespace("caret", quietly = TRUE)) {
+  install.packages("caret")
+}
 library(caret)
+
+library(tidymodels)
+
+library(glmnet)
+
+install.packages("car")
+library(car)
 ```
 
 ```{r}
@@ -24,31 +45,31 @@ crime_data93 = af_crime93
 
 **1. Describe your dataset. What is the dataset about? What are the features? What is the target variable? How many samples are there in the dataset? How many features are there in the dataset? Remember to prepare your data in a recipe, and to split the data into training and testing sets. Normalize the data if necessary! Make sure to clean your data, and deal with missing values if necessary.**
 
-**Describing the Dataset** The af_crime93 dataset contains statewide crime and socioeconomic data from the year 1993 for all 51 U.S. states (including Washington, D.C.). It includes various crime rates and demographic statistics.
+**Describing the Dataset** 
+
+The af_crime93 dataset contains statewide crime and socioeconomic data from the year 1993 for all 51 U.S. states (including Washington, D.C.). It includes various crime rates and demographic statistics.
 
 **Features (Independent Variables):**
 
--   **state** – Name of the U.S. state (character variable).
+-   **state** – Name of the U.S. state (character)
 
--   **murder** – Murder rate per 100,000 people (numeric).
+-   **murder** – Murder rate per 100,000 people (numeric)
 
--   **poverty** – Percentage of the population living below the poverty line (numeric).
+-   **poverty** – Percentage of the population living below the poverty line (numeric)
 
--   **single** – Percentage of families headed by a single parent (numeric).
+-   **single** – Percentage of families headed by a single parent (numeric)
 
--   **metro** – Percentage of the population living in metropolitan areas (numeric).
+-   **metro** – Percentage of the population living in metropolitan areas (numeric)
 
--   **white** – Percentage of the state’s population that is White (numeric).
+-   **white** – Percentage of the state’s population that is White (numeric)
 
--   **highschool** – Percentage of the population that graduated from high school (numeric).
+-   **highschool** – Percentage of the population that graduated from high school (numeric)
 
 **Target Variable (Dependent Variable):**
 
-```{r}
-# This is the main variable we are trying to predict using the other features.
-```
-
 -   **violent** – Violent crime rate per 100,000 people (numeric). This is the main variable we are trying to predict using the other features.
+
+This is the main variable we are trying to predict using the other features.
 
 ```{r}
 dim(crime_data93)
@@ -59,18 +80,9 @@ dim(crime_data93)
 ```{r}
 set.seed(123)
 # Split the data into 80% training and 20% testing
-data_split = initial_split(af_crime93, prop = 0.8)
-train_data = training(data_split)
-test_data = testing(data_split)
-```
-
-```{r}
-# Normalize the data (excluding the first column, which is likely categorical)
-preProc <- preProcess(train_data[, -1], method = c("center", "scale"))
-
-# Apply normalization to training and testing datasets
-train_data_norm <- predict(preProc, train_data[, -1])
-test_data_norm <- predict(preProc, test_data[, -1])
+data_split <- initial_split(crime_data93, prop = 0.8)
+train_data <- training(data_split)
+test_data <- testing(data_split)
 ```
 
 **2. Describe the model that you are using. What is the model? Why do you think it will work well with the dataset that you have chosen? What are the hyperparameters of the model? Define whether you are using a classification model or a regression model. Answer all of these questions BEFORE you train the model.**
@@ -93,6 +105,45 @@ Linear regression has fewer hyperparameters. However, we can still adjust certai
 
 **3. Train the model. If there are hyperparameters that you need to tune, tune them. If you choose not to tune them, explain why.**
 
+```{r}
+# Define logistic regression model
+lm_spec <- linear_reg() %>%
+  set_engine("lm")
+```
+
+```{r}
+# Create workflow
+lm_wf <- workflow() %>%
+  add_model(lm_spec) %>%
+  add_formula(violent ~ murder + poverty + single + metro + white + highschool)
+```
+
+```{r}
+# Fit model
+fit <- fit(lm_wf, data = train_data)
+```
 
 
 **4. Evaluate the model. Decide which metrics are relevant for your model, and evaluate the model using those metrics.**
+
+```{r}
+# Evaluate model
+preds <- predict(fit, test_data) %>%
+  bind_cols(test_data)
+```
+
+The .pred column contains the predicted violent crime values for each state, while the violent column shows the actual values. By comparing these two, we can assess the accuracy of the model’s predictions.
+
+```{r}
+rmse_value <- rmse(preds, truth = violent, estimate = .pred)
+```
+
+```{r}
+print(paste("RMSE:", round(rmse_value$.estimate, 4)))
+```
+
+The RMSE (Root Mean Square Error) value of 187.39 means that on average, the model’s predictions deviate from actual values by about 187 violent crimes. Since RMSE quantifies prediction error in the same unit as the dependent variable, a lower RMSE would indicate better accuracy—suggesting that 187 may be relatively high, depending on the dataset’s scale. In evaluating the model, performance metrics like RMSE, R-squared (R²), and MAE (Mean Absolute Error) are essential for assessing prediction quality. Here, RMSE was chosen as the primary metric, but additional evaluations using R² or MAE could provide a more comprehensive assessment of the model’s reliability.
+
+**5. Write a short paragraph about what you learned from the model. What worked well? What did not work well? What would you do differently next time? Is this a good model? Will you use it for real world applications?**
+
+From the model, I learned that violent crime rates can be predicted using socioeconomic factors like poverty, single-parent households, and education levels. The model provided reasonable predictions, but with an RMSE of 187.39, the accuracy is not ideal. This suggests that while the model captures some trends, there is a significant margin of error. What worked well was the ability to quickly test relationships between variables and get interpretable results. However, what did not work well was the model’s predictive precision—likely due to missing key factors such as unemployment rates, policing policies, or regional crime trends. Next time, I would explore adding more relevant variables, checking for multicollinearity, and trying alternative models like random forests or penalized regression. Given the high RMSE, this is not the best model for real-world applications, as its predictions may be too imprecise for policy decisions or resource allocation in crime prevention.
